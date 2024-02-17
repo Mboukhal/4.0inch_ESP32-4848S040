@@ -1,0 +1,7 @@
+The 4-inch screen relay and I2S audio are shared IO ports, IO1, IO2, and IO40. If audio is needed, the 0 ohm resistors R25, R26, and R27 should 
+be moved to R21, R22, and R23.
+The installation package for ESP32 must not be lower than version 2.0.6.
+
+1、Replace partition table huge_ App.csv   Route：C:\Users\zhang'pei\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.11\tools\partitions
+2、Replace boards.txt                                Route：C:\Users\zhang'pei\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.11
+3、Select the max app

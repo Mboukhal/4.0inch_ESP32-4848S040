@@ -1,0 +1,315 @@
+#define LGFX_USE_V1
+#include <LovyanGFX.hpp>
+
+#include <lgfx/v1/platforms/esp32s3/Panel_RGB.hpp>
+#include <lgfx/v1/platforms/esp32s3/Bus_RGB.hpp>
+#include <driver/i2c.h>
+#include "lv_demo_widgets.h"
+#include "demos/lv_demos.h"
+
+#define GFX_BL 38
+// #include <Ticker.h>
+#include <lvgl.h>
+
+class LGFX : public lgfx::LGFX_Device
+{
+public:
+    lgfx::Bus_RGB _bus_instance;
+    lgfx::Panel_ST7701 _panel_instance;
+    lgfx::Touch_GT911 _touch_instance;
+    // lgfx::Light_PWM   _light_instance;
+
+    LGFX(void)
+    {
+        {
+            auto cfg = _panel_instance.config();
+
+            cfg.memory_width = 480;
+            cfg.memory_height = 480;
+            cfg.panel_width = 480;
+            cfg.panel_height = 480;
+
+            cfg.offset_x = 0;
+            cfg.offset_y = 0;
+
+            _panel_instance.config(cfg);
+        }
+
+        {
+            auto cfg = _panel_instance.config_detail();
+
+            cfg.pin_cs = 39;
+            cfg.pin_sclk = 48;
+            cfg.pin_mosi = 47;
+
+            _panel_instance.config_detail(cfg);
+        }
+
+        // Arduino_ESP32RGBPanel *bus = new Arduino_ESP32RGBPanel(
+        //     39 /* CS */, 48 /* SCK */, 47 /* SDA */,
+        //     18 /* DE */, 17 /* VSYNC */, 16 /* HSYNC */, 21 /* PCLK */,
+        //     11 /* R0 */, 12 /* R1 */, 13 /* R2 */, 14 /* R3 */, 0 /* R4 */,
+        //     8 /* G0 */, 20 /* G1 */, 3 /* G2 */, 46 /* G3 */, 9 /* G4 */, 10 /* G5 */,
+        //     4 /* B0 */, 5 /* B1 */, 6 /* B2 */, 7 /* B3 */, 15 /* B4 */
+        // );
+        {
+            auto cfg = _bus_instance.config();
+            cfg.panel = &_panel_instance;
+            cfg.pin_d0 = 4;   // B0
+            cfg.pin_d1 = 5;   // B1
+            cfg.pin_d2 = 6;   // B2
+            cfg.pin_d3 = 7;   // B3
+            cfg.pin_d4 = 15;  // B4
+            cfg.pin_d5 = 8;   // G0
+            cfg.pin_d6 = 20;  // G1
+            cfg.pin_d7 = 3;   // G2
+            cfg.pin_d8 = 46;  // G3
+            cfg.pin_d9 = 9;   // G4
+            cfg.pin_d10 = 10; // G5
+            cfg.pin_d11 = 11; // R0
+            cfg.pin_d12 = 12; // R1
+            cfg.pin_d13 = 13; // R2
+            cfg.pin_d14 = 14; // R3
+            cfg.pin_d15 = 0;  // R4
+
+            cfg.pin_henable = 18;
+            cfg.pin_vsync = 17;
+            cfg.pin_hsync = 16;
+            cfg.pin_pclk = 21;
+            cfg.freq_write = 14000000;
+
+            cfg.hsync_polarity = 0;
+            cfg.hsync_front_porch = 10;
+            cfg.hsync_pulse_width = 8;
+            cfg.hsync_back_porch = 50;
+            cfg.vsync_polarity = 0;
+            cfg.vsync_front_porch = 10;
+            cfg.vsync_pulse_width = 8;
+            cfg.vsync_back_porch = 20;
+            cfg.pclk_idle_high = 0;
+            cfg.de_idle_high = 1;
+            _bus_instance.config(cfg);
+        }
+        _panel_instance.setBus(&_bus_instance);
+
+        // {
+        //   auto cfg = _touch_instance.config();
+        //   cfg.x_min      = 0;
+        //   cfg.x_max      = 480;
+        //   cfg.y_min      = 0;
+        //   cfg.y_max      = 480;
+        //   cfg.bus_shared = false;
+        //   cfg.offset_rotation = 0;
+
+        //   cfg.i2c_port   = I2C_NUM_1;
+
+        //   cfg.pin_int    = GPIO_NUM_NC;
+        //   cfg.pin_sda    = 19;
+        //   cfg.pin_scl    = 45;
+        //   cfg.pin_rst    = GPIO_NUM_NC;
+
+        //   cfg.freq       = 400000;
+        //   _touch_instance.config(cfg);
+        //   _panel_instance.setTouch(&_touch_instance);
+        // }
+
+        // {
+        //   auto cfg = _light_instance.config();
+        //   cfg.pin_bl = GPIO_NUM_44;
+        //   _light_instance.config(cfg);
+        // }
+        // _panel_instance.light(&_light_instance);
+
+        setPanel(&_panel_instance);
+    }
+};
+
+LGFX display;
+
+// void setup(void)
+// {
+// #ifdef GFX_BL
+//     // pinMode(GFX_BL, OUTPUT);
+//     // digitalWrite(GFX_BL, HIGH);
+//     ledcSetup(0, 600, 8);
+//     ledcAttachPin(GFX_BL, 0);
+//     ledcWrite(0, 150);
+// #endif
+//     // SPIバスとパネルの初期化を実行すると使用可能になります。
+//     display.init();
+
+//     display.setTextSize((std::max(display.width(), display.height()) + 255) >> 8);
+
+//     // タッチが使用可能な場合のキャリブレーションを行います。（省略可）
+//     if (display.touch())
+//     {
+//         if (display.width() < display.height())
+//             display.setRotation(display.getRotation() ^ 1);
+
+//         // 画面に案内文章を描画します。
+//         display.setTextDatum(textdatum_t::middle_center);
+//         display.drawString("touch the arrow marker.", display.width() >> 1, display.height() >> 1);
+//         display.setTextDatum(textdatum_t::top_left);
+
+//         // タッチを使用する場合、キャリブレーションを行います。画面の四隅に表示される矢印の先端を順にタッチしてください。
+//         std::uint16_t fg = TFT_WHITE;
+//         std::uint16_t bg = TFT_BLACK;
+//         if (display.isEPD())
+//             std::swap(fg, bg);
+//         display.calibrateTouch(nullptr, fg, bg, std::max(display.width(), display.height()) >> 3);
+//     }
+
+//     display.fillScreen(TFT_BLACK);
+// }
+
+// uint32_t count = ~0;
+// void loop(void)
+// {
+//     display.startWrite();
+//     display.setRotation(++count & 7);
+//     display.setColorDepth((count & 8) ? 16 : 24);
+
+//     display.setTextColor(TFT_WHITE);
+//     display.drawNumber(display.getRotation(), 16, 0);
+
+//     display.setTextColor(0xFF0000U);
+//     display.drawString("R", 30, 16);
+//     display.setTextColor(0x00FF00U);
+//     display.drawString("G", 40, 16);
+//     display.setTextColor(0x0000FFU);
+//     display.drawString("B", 50, 16);
+
+//     display.drawRect(30, 30, display.width() - 60, display.height() - 60, count * 7);
+//     display.drawFastHLine(0, 0, 10);
+
+//     display.endWrite();
+
+//     int32_t x, y;
+//     if (display.getTouch(&x, &y))
+//     {
+//         display.fillRect(x - 2, y - 2, 5, 5, count * 7);
+//     }
+// }
+
+#include "touch.h"
+
+#include <esp_heap_caps.h>
+
+/* Change to your screen resolution */
+
+static lv_disp_draw_buf_t draw_buf;
+static lv_color_t *disp_draw_buf;
+static lv_disp_drv_t disp_drv;
+
+/* Display flushing */
+void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
+{
+  if (display.getStartCount() == 0)
+  {
+    display.endWrite();
+  }
+
+  display.pushImageDMA(area->x1, area->y1, area->x2 - area->x1 + 1, area->y2 - area->y1 + 1, (lgfx::swap565_t *)&color_p->full);
+
+  lv_disp_flush_ready(disp); /* tell lvgl that flushing is done */
+}
+
+
+void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
+{
+  if (touch_has_signal())
+  {
+    if (touch_touched())
+    {
+      data->state = LV_INDEV_STATE_PR;
+
+      /*Set the coordinates*/
+      data->point.x = touch_last_x;
+      data->point.y = touch_last_y;
+    }
+    else if (touch_released())
+    {
+      data->state = LV_INDEV_STATE_REL;
+    }
+  }
+  else
+  {
+    data->state = LV_INDEV_STATE_REL;
+  }
+}
+
+void setup()
+{
+    Serial.begin(115200);
+
+    Serial.printf("SRAM free size: %d\n", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+    Serial.printf("PSRAM free size: %d\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+
+#ifdef GFX_BL
+    // pinMode(GFX_BL, OUTPUT);
+    // digitalWrite(GFX_BL, HIGH);
+    ledcSetup(0, 600, 8);
+    ledcAttachPin(GFX_BL, 0);
+    ledcWrite(0, 150);
+#endif
+    display.init();
+    touch_init();
+    lv_init();
+
+    // #ifdef ESP32
+    // disp_draw_buf = (lv_color_t *)heap_caps_malloc(sizeof(lv_color_t) * screenWidth * 480, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    // #else
+    //   disp_draw_buf = (lv_color_t *)malloc(sizeof(lv_color_t) * screenWidth * 100);
+    // #endif
+    //  disp_draw_buf = (lv_color_t *)heap_caps_malloc(sizeof(lv_color_t) * screenWidth * 480, MALLOC_CAP_SPIRAM);
+
+    lv_color_t *buf_3_1 = (lv_color_t *)heap_caps_malloc(sizeof(lv_color_t) * 480 * 480, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    lv_color_t *buf_3_2 = (lv_color_t *)heap_caps_malloc(sizeof(lv_color_t) * 480 * 480, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+
+    // if (!disp_draw_buf)
+    // {
+    //   Serial.println("LVGL disp_draw_buf allocate failed!");
+    // }
+    if (!buf_3_1 && !buf_3_2)
+    {
+        Serial.println("LVGL disp_draw_buf allocate failed!");
+    }
+
+    else
+    {
+        // lv_disp_draw_buf_init(&draw_buf, disp_draw_buf, NULL, screenWidth * 480);
+
+        lv_disp_draw_buf_init(&draw_buf, buf_3_1, buf_3_2, 480 * 480);
+
+        /* Initialize the display */
+        lv_disp_drv_init(&disp_drv);
+        /* Change the following line to your display resolution */
+        disp_drv.hor_res = 480;
+        disp_drv.ver_res = 480;
+        disp_drv.flush_cb = my_disp_flush;
+        disp_drv.draw_buf = &draw_buf;
+        lv_disp_drv_register(&disp_drv);
+
+        /* Initialize the (dummy) input device driver */
+        static lv_indev_drv_t indev_drv;
+        lv_indev_drv_init(&indev_drv);
+        indev_drv.type = LV_INDEV_TYPE_POINTER;
+        indev_drv.read_cb = my_touchpad_read;
+        lv_indev_drv_register(&indev_drv);
+
+        // lv_demo_widgets();
+        lv_demo_benchmark();
+        // ui_main();
+        Serial.println("Setup done");
+
+        Serial.printf("SRAM free size: %d\n", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+        Serial.printf("PSRAM free size: %d\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+
+    }
+}
+
+void loop()
+{
+    lv_timer_handler(); /* let the GUI do its work */
+    delay(1);
+}
